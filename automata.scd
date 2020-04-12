@@ -7,7 +7,36 @@ s.waitForBoot({
 
 	(
 		SynthDef(
-			\particle, {
+			\lofitri, {
+				arg midi_note = 60, amp = 0.3, cutoff = 3000, gain = 2, detune = 0, atk=0.1, rel = 1, num_voices = 10;
+				var sig, env, freq;
+
+				freq = (midi_note + detune).midicps;
+
+				atk =  Rand(atk-atk/10, atk+atk/10);
+
+				env = EnvGen.ar(
+					envelope: Env.perc(atk, rel),
+					doneAction: 2);
+
+				sig = LFTri.ar(
+					freq: freq + (LFNoise0.kr(freq, freq/20)),
+					mul: amp + LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2)).distort;
+
+				sig = MoogFF.ar(
+					in: sig,
+					freq: cutoff,
+					gain: gain);
+
+				sig = Splay.ar(sig);
+
+				sig = sig * env * amp;
+
+				Out.ar(0, sig);
+		}).add;
+
+		SynthDef(
+			\lofisaw, {
 				arg midi_note = 60, amp = 0.3, cutoff = 3000, gain = 2, detune = 0, atk=0.1, rel = 1, num_voices = 10;
 				var sig, env, freq;
 
@@ -34,6 +63,94 @@ s.waitForBoot({
 
 				Out.ar(0, sig);
 		}).add;
+
+		SynthDef(
+			\lofisq, {
+				arg midi_note = 60, amp = 0.3, cutoff = 3000, gain = 2, detune = 0, atk=0.1, rel = 1, num_voices = 10;
+				var sig, env, freq;
+
+				freq = (midi_note + detune).midicps;
+
+				atk =  Rand(atk-atk/10, atk+atk/10);
+
+				env = EnvGen.ar(
+					envelope: Env.perc(atk, rel),
+					doneAction: 2);
+
+				sig = LFPulse.ar(
+					freq: freq + (LFNoise0.kr(freq, freq/20)),
+					mul: amp + LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2)).distort;
+
+				sig = MoogFF.ar(
+					in: sig,
+					freq: cutoff,
+					gain: gain);
+
+				sig = Splay.ar(sig);
+
+				sig = sig * env * amp;
+
+				Out.ar(0, sig);
+		}).add;
+
+		SynthDef(
+			\lofisq, {
+				arg midi_note = 60, amp = 0.3, cutoff = 3000, gain = 2, detune = 0, atk=0.1, rel = 1, num_voices = 10;
+				var sig, env, freq;
+
+				freq = (midi_note + detune).midicps;
+
+				atk =  Rand(atk-atk/10, atk+atk/10);
+
+				env = EnvGen.ar(
+					envelope: Env.perc(atk, rel),
+					doneAction: 2);
+
+				sig = LFPulse.ar(
+					freq: freq + (LFNoise0.kr(freq, freq/20)),
+					mul: amp + LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2)).distort;
+
+				sig = MoogFF.ar(
+					in: sig,
+					freq: cutoff,
+					gain: gain);
+
+				sig = Splay.ar(sig);
+
+				sig = sig * env * amp;
+
+				Out.ar(0, sig);
+		}).add;
+
+		SynthDef(
+			\lofisin, {
+				arg midi_note = 60, amp = 0.3, cutoff = 3000, gain = 2, detune = 0, atk=0.1, rel = 1, num_voices = 10;
+				var sig, env, freq;
+
+				freq = (midi_note + detune).midicps;
+
+				atk =  Rand(atk-atk/10, atk+atk/10);
+
+				env = EnvGen.ar(
+					envelope: Env.perc(atk, rel),
+					doneAction: 2);
+
+				sig = SinOsc.ar(
+					freq: freq + (LFNoise0.kr(freq, freq/20)),
+					mul: amp + LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2)).distort;
+
+				sig = MoogFF.ar(
+					in: sig,
+					freq: cutoff,
+					gain: gain);
+
+				sig = Splay.ar(sig);
+
+				sig = sig * env * amp;
+
+				Out.ar(0, sig);
+		}).add;
+
 	);
 
 	////////////////////////////////////////////////////
