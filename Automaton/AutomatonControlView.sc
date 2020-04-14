@@ -234,14 +234,6 @@ AutomatonSoundView : AutomatonControlView{
 		.action_({
 			arg b;
 			var synthdef, key, scale, pans, atks, rels, cutoffs;
-/*			"made it here".postln;
-			b.parent.eztexts[0].textField.value.asSymbol.postln;
-			b.parent.eztexts[1].textField.value.asInt.postln;
-			b.parent.eztexts[2].textField.value.asArray.postln;
-			b.parent.textfields[0].getBounds.asArray.postln;
-			b.parent.textfields[1].getBounds.asArray.postln;
-			b.parent.textfields[2].getBounds.asArray.postln;
-			b.parent.textfields[3].getBounds.asArray.postln;*/
 
 			synthdef = b.parent.eztexts[0].textField.value.replace("'", "").asSymbol;
 			key      = b.parent.eztexts[1].textField.value.asInt;

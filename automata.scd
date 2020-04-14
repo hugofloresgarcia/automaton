@@ -15,13 +15,13 @@ s.waitForBoot({
 
 				atk =  Rand(atk-atk/10, atk+atk/10);
 
-				env = EnvGen.ar(
+				env = EnvGen.kr(
 					envelope: Env.perc(atk, rel),
 					doneAction: 2);
 
 				sig = LFTri.ar(
 					freq: freq + (LFNoise0.kr(freq, freq/20)),
-					mul: amp + LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2)).distort;
+					mul: env + LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2)).distort;
 
 				sig = MoogFF.ar(
 					in: sig,
@@ -30,7 +30,7 @@ s.waitForBoot({
 
 				sig = Splay.ar(sig);
 
-				sig = sig * env * amp;
+				sig = sig * amp.squared;
 
 				Out.ar(0, sig);
 		}).add;
@@ -44,13 +44,13 @@ s.waitForBoot({
 
 				atk =  Rand(atk-atk/10, atk+atk/10);
 
-				env = EnvGen.ar(
+				env = EnvGen.kr(
 					envelope: Env.perc(atk, rel),
 					doneAction: 2);
 
 				sig = LFSaw.ar(
 					freq: freq + (LFNoise0.kr(freq, freq/20)),
-					mul: amp + LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2)).distort;
+					mul: env + LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2)).distort;
 
 				sig = MoogFF.ar(
 					in: sig,
@@ -59,7 +59,7 @@ s.waitForBoot({
 
 				sig = Splay.ar(sig);
 
-				sig = sig * env * amp;
+				sig = sig * amp.squared;
 
 				Out.ar(0, sig);
 		}).add;
@@ -73,13 +73,13 @@ s.waitForBoot({
 
 				atk =  Rand(atk-atk/10, atk+atk/10);
 
-				env = EnvGen.ar(
+				env = EnvGen.kr(
 					envelope: Env.perc(atk, rel),
 					doneAction: 2);
 
 				sig = LFPulse.ar(
 					freq: freq + (LFNoise0.kr(freq, freq/20)),
-					mul: amp + LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2)).distort;
+					mul: env + LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2)).distort;
 
 				sig = MoogFF.ar(
 					in: sig,
@@ -88,7 +88,7 @@ s.waitForBoot({
 
 				sig = Splay.ar(sig);
 
-				sig = sig * env * amp;
+				sig = sig * amp.squared;
 
 				Out.ar(0, sig);
 		}).add;
@@ -102,13 +102,13 @@ s.waitForBoot({
 
 				atk =  Rand(atk-atk/10, atk+atk/10);
 
-				env = EnvGen.ar(
+				env = EnvGen.kr(
 					envelope: Env.perc(atk, rel),
 					doneAction: 2);
 
 				sig = LFPulse.ar(
 					freq: freq + (LFNoise0.kr(freq, freq/20)),
-					mul: amp + LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2)).distort;
+					mul: env + LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2)).distort;
 
 				sig = MoogFF.ar(
 					in: sig,
@@ -117,7 +117,7 @@ s.waitForBoot({
 
 				sig = Splay.ar(sig);
 
-				sig = sig * env * amp;
+				sig = sig * amp.squared;
 
 				Out.ar(0, sig);
 		}).add;
@@ -131,13 +131,13 @@ s.waitForBoot({
 
 				atk =  Rand(atk-atk/10, atk+atk/10);
 
-				env = EnvGen.ar(
+				env = EnvGen.kr(
 					envelope: Env.perc(atk, rel),
 					doneAction: 2);
 
 				sig = SinOsc.ar(
 					freq: freq + (LFNoise0.kr(freq, freq/20)),
-					mul: amp + LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2)).distort;
+					mul: env + LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2)).distort;
 
 				sig = MoogFF.ar(
 					in: sig,
@@ -146,7 +146,7 @@ s.waitForBoot({
 
 				sig = Splay.ar(sig);
 
-				sig = sig * env * amp;
+				sig = sig * amp;
 
 				Out.ar(0, sig);
 		}).add;
@@ -222,7 +222,16 @@ s.waitForBoot({
 	////////////////////////////////////////////////////
 	(
 		~makeAutomatonWindow = {
-			arg cells_x, cells_y, cell_size;
+			arg
+			cells_x = 24,
+			cells_y = 12,
+			cell_size = 20,
+			synthdef = \lofitri,
+			key = 48,
+			scale = [0, 2, 4, 7, 9];
+
+
+
 			var init_x, init_y, width, height, bounds;
 			bounds = Window.availableBounds;
 			init_x = bounds.width.rand;
@@ -237,12 +246,12 @@ s.waitForBoot({
 			~view_dim_x = ~cells_x * ~cell_size + (~pad);
 			~view_dim_y = ~cells_y * ~cell_size + (~pad);
 
-			~control_bar_y = 12 * ~cell_size;
+			~control_bar_y = 8 * 20;
 
 			~window_x = ~v_cols * (~view_dim_x) + ~pad;
 			~window_y = ~v_rows * (~view_dim_y) + ~control_bar_y+~pad+~pad;
 
-			~control_bar_x = ~window_x - (2*~pad); //~cells_x * ~cell_size * ~v_cols + (~pad *2);
+			~control_bar_x = 1* (~view_dim_x) + ~pad - (2*~pad); //~cells_x * ~cell_size * ~v_cols + (~pad *2);
 			////////////////////////////////////////////////////
 			////////////////////////////////////////////////////
 			////////////////      WINDOW     ///////////////////
@@ -276,15 +285,15 @@ s.waitForBoot({
 					cells_x: ~cells_x,
 					cells_y: ~cells_y,
 					cell_size: ~cell_size)
-				.spawnRandomOnClick;
+				.spawnRandomOnClick
+				.frameRate_(6);
 				// .clickForControl;
 
 				15.do({view.cell_grid.spawnRandom});
-				view.drawFunc = view.cell_grid.drawGameOfLife(spawnRandomly: true);
 				view.cell_grid.setCellOrganelles(
-					synthdef: \particle,
-					key: 48,
-					scale: [0, 2, 4, 7, 9, 11, 14],
+					synthdef: synthdef,
+					key: key,
+					scale: scale,
 					pans: [-1.0, 1.0],
 					atks: [0.01, 0.1],
 					rels:    [0.5, 0.1],
@@ -335,6 +344,12 @@ s.waitForBoot({
 					height: ~control_bar.bounds.height),
 				client: ~view_array.flatten.at(0)
 			).textfields[0].getBounds;
+
+			~view_array.flat.do({
+				arg view;
+				view.drawFunc = view.cell_grid.drawGameOfLife(spawnRandomly: true);
+			});
+
 		}
 	);
 	////////////////////////////////////////////////////
@@ -345,3 +360,6 @@ s.waitForBoot({
 }
 )
 
+
+
+/*~makeAutomatonWindow.value()*/

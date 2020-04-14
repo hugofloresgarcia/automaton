@@ -47,9 +47,15 @@ AutomatonView : UserView {
 		this.mouseMoveAction = {
 			arg v, x, y;
 			if (this.mousePressed,{
-				x = (x / this.cell_size).floor;
-				y = (y / this.cell_size).floor;
-				this.cell_grid.spawnRandomAtPos(spawn_num, x, y);
+				if ((x > 0) &&
+					(y > 0) &&
+					(x < this.bounds.width)  &&
+					(y < this.bounds.height), {
+
+						x = (x / this.cell_size).floor;
+						y = (y / this.cell_size).floor;
+						this.cell_grid.spawnRandomAtPos(spawn_num, x, y);
+				});
 			});
 		}
 	}

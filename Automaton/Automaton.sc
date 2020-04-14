@@ -88,12 +88,15 @@ CellGrid {
 			new_scale = base_scale + (12*count) + key;
 			scale = scale ++new_scale;
 		});
-		scale = scale.flat;
+		scale = scale.flat.scramble;
 
-		Organelle.note_cubby = 0!(scale[scale.size-1]);
+		if(Organelle.note_cubby.isNil,{
+			Organelle.note_cubby = 0!(127);
+		});
+
 		// Organelle.note_cubby.postln;
 
-		scale.postln;
+		// scale.postln;
 		this.grid.collect({
 			arg columns, row;
 			columns.collect({
@@ -101,7 +104,7 @@ CellGrid {
 				// scale.wrapAt(row).postln;
 				cell.organelle = Organelle(
 					synthdef: synthdef,
-					midinote: scale.wrapAt(row).clip(0, 127),
+					midinote: scale.wrapAt(row).clip(0, 127).asInt,
 					cutoff: column.linexp(0, this.cells_x, cutoffs[0], cutoffs[1]),
 					pan: column.linlin(0, this.cells_x, pans[0], pans[1]),
 					atk: cell.color.red.linlin(cell.colorBounds.at(0), cell.colorBounds.at(1), atks[0], atks[1]),
@@ -259,7 +262,8 @@ CellGrid {
 				arg column, row;
 				// "row change ; ".post;
 				column.do({
-					arg neighbors, c_idx, num_alive, this_cell, rule;
+					arg cell, c_idx;
+					var neighbors, num_alive, this_cell, rule;
 					// "column change ; ".postln;
 					neighbors = this.getNeighbors(row, c_idx);
 					this_cell = this.grid[row][c_idx];

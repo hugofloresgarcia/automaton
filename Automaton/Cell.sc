@@ -86,7 +86,6 @@ Organelle {
 
 	play {
 
-
 		if(total_synth_count > absolute_max_synth_count, {
 			max_note_frequency = max_note_frequency - 1;
 		}, {
@@ -94,9 +93,11 @@ Organelle {
 		});
 		max_note_frequency = max_note_frequency.clip(1, 3);
 
+/*		note_cubby.postln;
+		note_cubby.size.postln;
+		this.midinote.postln;*/
 
-
-		if( note_cubby.at(this.midinote) < max_note_frequency, {
+		if(note_cubby.at(this.midinote) < max_note_frequency, {
 			//
 			// "note ".post; this.midinote.postln;
 			// "note freq ".post; note_cubby.at(this.midinote).postln;
@@ -122,7 +123,7 @@ Organelle {
 		if(this.synth.isNil.not, {
 			this.synth.set(\gate, 0);
 			this.synth = nil;
-			note_cubby[this.midinote]= note_cubby[this.midinote] - 1;
+			note_cubby[this.midinote] = note_cubby[this.midinote] - 1;
 			total_synth_count = total_synth_count - 1;
 
 		});
