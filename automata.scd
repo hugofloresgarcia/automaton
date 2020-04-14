@@ -334,7 +334,6 @@ s.waitForBoot({
 				client: ~view_array.flatten.at(0)
 			).createAll;
 
-
 			~sound_control_bar = AutomatonSoundView(
 				parent: ~control_bar,
 				bounds: Rect(
@@ -343,13 +342,12 @@ s.waitForBoot({
 					width: ~control_bar.bounds.width / 2,
 					height: ~control_bar.bounds.height),
 				client: ~view_array.flatten.at(0)
-			).textfields[0].getBounds;
+			);
 
 			~view_array.flat.do({
 				arg view;
 				view.drawFunc = view.cell_grid.drawGameOfLife(spawnRandomly: true);
 			});
-
 		}
 	);
 	////////////////////////////////////////////////////
@@ -358,8 +356,6 @@ s.waitForBoot({
 	////////////////////////////////////////////////////
 	~mainMenu.value
 }
-)
+);
 
 
-
-/*~makeAutomatonWindow.value()*/

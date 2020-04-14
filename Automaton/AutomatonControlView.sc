@@ -3,6 +3,7 @@ AutomatonControlView : View {
 	<>parent,
 	<>bounds,
 	<>client,
+	<>layout,
 
 	<>pad,
 	<>slider_height,
@@ -17,11 +18,6 @@ AutomatonControlView : View {
 
 	<>list_width,
 	<>list_height,
-
-	<>list_left,
-	<>slider_left,
-	<>button_left,
-
 
 	<>sliders,
 	<>buttons,
@@ -45,8 +41,8 @@ AutomatonControlView : View {
 
 		this.pad = 10;
 
-		this.slider_width = 2 * grid_x;
-		this.slider_height = 1 * grid_y;
+		this.slider_width = 1 * grid_x;
+		this.slider_height = 9 * grid_y;
 
 		this.button_width = 1 * grid_x;
 		this.button_height = 1 * grid_y;
@@ -55,20 +51,30 @@ AutomatonControlView : View {
 		this.list_height = 9 * grid_y;
 
 
-		this.list_left = this.pad;
+/*		this.list_left = this.pad;
 		this.button_left = this.list_left + this.list_width + this.pad;
-		this.slider_left = this.button_left + this.button_width + this.pad;
+		this.slider_left = this.button_left + this.button_width + this.pad;*/
 
 	}
 
 	createAll{
-		this.createWidgetActions();
+		var layout;
+		this.sliders = List.new();
+		this.buttons = List.new();
+		this.list_views = List.new();
+
+		layout  = FlowLayout(this.bounds, 5@5, 5@5);
+
+		this.decorator_(layout);
+
+		this.createActions();
+		this.createRuleSets();
 		this.createSliders();
 		this.createButtons();
-		this.createRuleSets();
+
 	}
 
-	createWidgetActions{
+	createActions{
 		this.slider_labels = ["randomness"];
 
 		this.slider_actions = [{
@@ -99,15 +105,14 @@ AutomatonControlView : View {
 			arg action, count;
 			var slider;
 
-			slider = Slider.new(
+			slider = EZSlider.new(
 				parent: this,
-				bounds: Rect(
-					left: this.slider_left,
-					top: this.pad + (this.slider_height * count),
-					width: this.slider_width,
-					height: this.slider_height));
+				bounds: this.slider_width@this.slider_height,
+				label: this.slider_labels.at(count),
+				layout: 'vert'
+			)
+			.action_(action);
 
-			slider.action_(action);
 			this.sliders.add(slider);
 		});
 	}
@@ -121,13 +126,8 @@ AutomatonControlView : View {
 
 			bttn = Button.new(
 				parent: this,
-				bounds: Rect(
-					left: this.button_left,
-					top: this.pad + (this.button_height  * count),
-					width: this.button_width,
-					height: this.button_height))
+				bounds: this.button_width@this.button_height)
 			.action_(action)
-			// .visible_(false)
 			.states_([[this.button_labels[count]]]);
 
 			this.buttons.add(bttn);
@@ -139,11 +139,9 @@ AutomatonControlView : View {
 		items = this.client.cell_grid.available_rules;
 		functions  = this.client.cell_grid.available_rule_sets;
 
-		view = ListView(this, Rect(
-			left: this.list_left,
-			top: this.pad,
-			width: this.list_width,
-			height: this.list_height))
+		view = ListView(
+			parent: this,
+			bounds: this.list_width@this.list_height)
 		.items_(items)
 		.action_({
 			arg v;
@@ -153,20 +151,34 @@ AutomatonControlView : View {
 		this.list_views.add(view);
 	}
 }
-
-AutomatonSoundView : AutomatonControlView{
-	 var parent, bounds, client,
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+AutomatonSoundView : VLayoutView{
+	 var parent, bounds, <>client,
 	<>textfields,
 	<>params,
 	<>param_s,
 	<>single_entries,
 	<>single_entrie_s,
 	<>eztexts,
-	<>update_button;
+	<>update_button,
+
+	<>entry_labels,
+	<>entry_values,
+	<>range_labels,
+	<>range_values;
 
 
 	*new{|parent, bounds, client|
-		^super.new(parent, bounds, client).createWidgetActions;
+		^super.new(parent, bounds).init(client).createWidgetActions;
+	}
+
+	init{|client|
+		this.client = client
 	}
 
 	createWidgetActions{
@@ -175,59 +187,80 @@ AutomatonSoundView : AutomatonControlView{
 		this.textfields = List.new();
 		this.eztexts = List.new();
 
-		this.params = [ "pans", "atks", "rels", "cutoffs"];
-		this.param_s = [this.client.cell_grid.pans, this.client.cell_grid.atks,
+		this.range_labels = [ "pans", "atks", "rels", "cutoffs"];
+		this.range_values = [this.client.cell_grid.pans, this.client.cell_grid.atks,
 			           this.client.cell_grid.rels, this.client.cell_grid.cutoffs];
 
-		this.single_entries = ["synthdef", "key", "scale"];
-		this.single_entrie_s = [
+		this.entry_labels = ["synthdef", "key", "scale"];
+		this.entry_values = [
 			this.client.cell_grid.synthdef,
 			this.client.cell_grid.key,
 			this.client.cell_grid.scale];
 
 		grid_x = this.bounds.width - 10;
-		grid_y = this.bounds.height / (this.single_entries.size + this.params.size+1);
+		grid_y = this.bounds.height / (this.entry_labels.size + this.range_labels.size+1);
 
-		this.single_entries.do({
+		// this.single_entries.do({
+		// 	arg str, count;
+		// 	this.eztexts.add(EZText.new(
+		// 		parent: this,
+		// 		bounds: Rect(
+		// 			left: 0,
+		// 			top: grid_y * count,
+		// 			width:grid_x,
+		// 		height: grid_y),
+		// 		label: str,
+		// 		labelWidth: grid_x/4,
+		// 		textWidth: grid_x/4*3,
+		// 		labelHeight: grid_y)
+		// 		.value_(this.single_entrie_s[count]);
+		// 	);
+		// });
+
+
+		this.entry_labels.do({
 			arg str, count;
 			this.eztexts.add(EZText.new(
 				parent: this,
-				bounds: Rect(
-					left: 0,
-					top: grid_y * count,
-					width:grid_x,
-					height: grid_y),
+				bounds: grid_x @ grid_y,
 				label: str,
 				labelWidth: grid_x/4,
-				textWidth: grid_x/4*3,
-				labelHeight: grid_y)
-			.value_(this.single_entrie_s[count]);
-			);
+				textWidth: grid_x/4 * 3,
+				labelHeight: grid_y,
+				initVal: this.entry_values[count]
+			));
+
 		});
 
-
-
-		this.params.do({
-			arg param, count;
+		this.range_labels.do({
+			arg label, count;
 			this.textfields.add(
 				RangeTextField(
 					parent: this,
 					bounds: Rect(
 						left:  (0),
-						top: (this.single_entries.size+count) * grid_y,
+						top: (this.entry_labels.size+count) * grid_y,
 						width: grid_x,
 						height: grid_y
 					),
-					labeltext: param,
-					min: this.param_s.at(count)[0],
-					max: this.param_s.at(count)[1]
+					labeltext: label,
+					min: this.range_values.at(count)[0],
+					max: this.range_values.at(count)[1]
 				)
 			);
 		});
 
+/*		this.range_labels.do({
+			arg str, count;
+			this.ranges.add(
+				EZRanger(
+					parent: this,
+					bounds: grid_x@grid_y,
+					label: str)*/
+
 		this.update_button = Button(this, Rect(
 			left: 10,
-			top:  grid_y * ( this.single_entries.size + this.params.size),
+			top:  grid_y * ( this.entry_labels.size + this.range_labels.size),
 			width:  grid_x-20,
 			height: grid_y))
 		.states_([["update all"]])
@@ -259,9 +292,6 @@ AutomatonSoundView : AutomatonControlView{
 				cutoffs: cutoffs);
 		});
 
-	}
-
-	createLists{
 	}
 }
 
