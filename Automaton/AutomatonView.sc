@@ -31,6 +31,10 @@ AutomatonView : UserView {
 		this.drawFunc = this.cell_grid.drawRandom;
 	}
 
+	createControlBusses{|master_vol|
+		this.cell_grid.master_volume_bus = master_vol;
+	}
+
 
 	gameOfLife {
 		^{

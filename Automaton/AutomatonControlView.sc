@@ -10,6 +10,7 @@ AutomatonControlView : View {
 	<>slider_width,
 	<>slider_actions,
 	<>slider_labels,
+	<>default_slider_values,
 
 	<>button_actions,
 	<>button_height,
@@ -19,6 +20,10 @@ AutomatonControlView : View {
 	<>list_width,
 	<>list_height,
 
+	<>text_labels,
+	<>text_actions,
+
+	<>texts,
 	<>sliders,
 	<>buttons,
 	<>list_views;
@@ -41,7 +46,7 @@ AutomatonControlView : View {
 
 		this.pad = 10;
 
-		this.slider_width = 1 * grid_x;
+		this.slider_width = 0.5 * grid_x;
 		this.slider_height = 9 * grid_y;
 
 		this.button_width = 1 * grid_x;
@@ -70,17 +75,23 @@ AutomatonControlView : View {
 		this.createActions();
 		this.createRuleSets();
 		this.createSliders();
-		this.createButtons();
+		// this.createButtons();
+		this.createTexts();
 
 	}
 
 	createActions{
-		this.slider_labels = ["randomness"];
+		this.slider_labels = ["rand", "master"];
 
 		this.slider_actions = [{
 			arg view;
 			client.cell_grid.randomness = view.value.linlin(0.0, 1.0, 0.0, 1.0);
+		}, {
+			arg view;
+			client.cell_grid.setMasterVol(view.value);
 		}];
+
+		this.default_slider_values = [0.0, 0.5];
 
 		///////////////////////////////////
 		//////////////DANIEL//////////////
@@ -98,6 +109,16 @@ AutomatonControlView : View {
 		this.button_actions = [{
 			this.client.cell_grid.setRandomColor();
 		}];
+
+		this.text_labels = ["bpm"];
+
+		this.text_actions = [{
+			arg v;
+			var periodt;
+			periodt = (v.value/60).clip(1, 12);
+			this.client.frameRate_(periodt);
+		}];
+
 	}
 
 	createSliders{
@@ -111,9 +132,26 @@ AutomatonControlView : View {
 				label: this.slider_labels.at(count),
 				layout: 'vert'
 			)
-			.action_(action);
+			.action_(action)
+			.valueAction_(this.default_slider_values[count]);
 
 			this.sliders.add(slider);
+		});
+	}
+
+	createTexts{
+		this.text_actions.do({
+			arg action, count;
+			var txt;
+			txt = EZText.new(
+				parent: this,
+				bounds: (this.list_width*1.25)@(this.button_height*2),
+				label: this.text_labels.at(count),
+				labelWidth: 40,
+				action: action
+			)
+			.valueAction_(420);
+			this.texts.add(txt);
 		});
 	}
 
@@ -268,6 +306,7 @@ AutomatonSoundView : VLayoutView{
 			arg b;
 			var synthdef, key, scale, pans, atks, rels, cutoffs;
 
+
 			synthdef = b.parent.eztexts[0].textField.value.replace("'", "").asSymbol;
 			key      = b.parent.eztexts[1].textField.value.asInt;
 			//fancy string to array conversion
@@ -282,6 +321,7 @@ AutomatonSoundView : VLayoutView{
 			rels     = b.parent.textfields[2].getBounds.asArray;
 			cutoffs  = b.parent.textfields[3].getBounds.asArray;
 
+			client.cell_grid.killAllOrganelles();
 			client.cell_grid.setCellOrganelles(
 				synthdef: synthdef,
 				key: key,
@@ -290,6 +330,7 @@ AutomatonSoundView : VLayoutView{
 				atks: atks,
 				rels: rels,
 				cutoffs: cutoffs);
+			client.cell_grid.killAllOrganelles();
 		});
 
 	}

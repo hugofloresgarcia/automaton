@@ -13,7 +13,9 @@ CellGrid {
 	<>pans,
 	<>atks,
 	<>rels,
-	<>cutoffs;
+	<>cutoffs,
+	<>master_volume_bus,
+	<>master_synth;
 
 	*new{|cells_x = 10, cells_y = 10, cell_size = 10|
 		^super.newCopyArgs(cells_x, cells_y, cell_size).create;
@@ -42,7 +44,7 @@ CellGrid {
 			"diamoeba",
 			"2x2",
 			"day_and_night",
-			"anneal"
+			"anneal",
 		];
 
 		this.available_rule_sets = [
@@ -53,11 +55,14 @@ CellGrid {
 			[[3, 5, 6, 7, 8],[5, 6, 7, 8]],
 			[[3, 6], [1, 2, 5]],
 			[[3, 6, 7, 8],[3, 4, 6, 7, 8]],
-			[[4, 6, 7, 8], [3, 5, 6, 7, 8]]
+			[[4, 6, 7, 8], [3, 5, 6, 7, 8]],
 		];
 
 		this.current_rule_set =  this.available_rule_sets[0];
+	}
 
+	createControlBusses{|master_vol|
+		this.master_volume_bus = master_vol;
 	}
 
 	setCellOrganelles{|synthdef, key, scale , pans , atks, rels, cutoffs|
@@ -91,7 +96,7 @@ CellGrid {
 		scale = scale.flat.scramble;
 
 		if(Organelle.note_cubby.isNil,{
-			Organelle.note_cubby = 0!(127);
+			Organelle.note_cubby = 0!(128);
 		});
 
 		// Organelle.note_cubby.postln;
@@ -104,14 +109,34 @@ CellGrid {
 				// scale.wrapAt(row).postln;
 				cell.organelle = Organelle(
 					synthdef: synthdef,
-					midinote: scale.wrapAt(row).clip(0, 127).asInt,
+					midinote: scale.wrapAt(row).clip(24, 96).asInt,
 					cutoff: column.linexp(0, this.cells_x, cutoffs[0], cutoffs[1]),
 					pan: column.linlin(0, this.cells_x, pans[0], pans[1]),
 					atk: cell.color.red.linlin(cell.colorBounds.at(0), cell.colorBounds.at(1), atks[0], atks[1]),
 					rel: cell.color.blue.linlin(cell.colorBounds.at(0), cell.colorBounds.at(1), rels[0], rels[1]),
-					gate: 1);
+					gate: 1
+				);
+				cell.organelle.amp_bus = this.master_volume_bus;
+				cell.organelle.amp_bus.postln;
 			});
 		});
+	}
+
+	killAllOrganelles{
+		this.grid.flat.do({
+			arg cell;
+			cell.organelle.synth.release(-1);
+		});
+	}
+	stopAllOrganelles{
+		this.grid.flat.do({
+			arg cell;
+			cell.organelle.synth.stop;
+		});
+	}
+
+	setMasterVol{|val|
+		this.master_volume_bus.set(val);
 	}
 
 	showCells{
