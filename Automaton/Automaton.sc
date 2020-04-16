@@ -117,7 +117,7 @@ CellGrid {
 					gate: 1
 				);
 				cell.organelle.amp_bus = this.master_volume_bus;
-				cell.organelle.amp_bus.postln;
+				// cell.organelle.amp_bus.postln;
 			});
 		});
 	}
@@ -125,13 +125,13 @@ CellGrid {
 	killAllOrganelles{
 		this.grid.flat.do({
 			arg cell;
-			cell.organelle.synth.release(-1);
+			cell.organelle.stop;
 		});
 	}
 	stopAllOrganelles{
 		this.grid.flat.do({
 			arg cell;
-			cell.organelle.synth.stop;
+			cell.organelle.stop;
 		});
 	}
 

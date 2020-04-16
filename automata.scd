@@ -1,3 +1,11 @@
+/// A WAY TO PEEK INTO THE CELLS AND THEIR ORGANELLES
+// grid[x][y[ for their position
+~view_array.flat[0].cell_grid.killAllOrganelles
+~view_array.flat[0].cell_grid.grid[0][0].organelle.synth.isPlaying
+~view_array.flat[0].cell_grid.grid[0][0].organelle.synth.isRunning
+~view_array.flat[0].cell_grid.grid[0][1].organelle.synth.get(\gate, {arg v; v.postln;})
+~view_array.flat[0].cell_grid.grid[0][1].isDead
+
 (
 s.waitForBoot({
 	////////////////////////////////////////////////////
@@ -7,6 +15,22 @@ s.waitForBoot({
 	////////////////////////////////////////////////////
 
 	(
+		(
+			SynthDef(
+				\test, {
+					arg midi_note = 60, amp = 0.3, gate =1;
+					var sig;
+					sig = SinOsc.ar(
+						freq: midi_note.midicps,
+						mul: EnvGen.kr(
+							envelope: Env.adsr,
+							gate: gate,
+							doneAction: 2
+						);
+					);
+					Out.ar(0, sig * amp);
+			}).add;
+		);
 		(
 			SynthDef(
 				\sawtooth, {
@@ -28,7 +52,7 @@ s.waitForBoot({
 							start: freq/8,
 							end: freq,
 							dur: atk,
-						) + (LFNoise0.kr(freq, freq/20)))!10,
+						) + (LFNoise0.kr(freq, freq/20))),
 						mul: amp +
 						LFNoise0.kr(Rand(1, 5)).range(-0.2, 0.2));
 
@@ -413,6 +437,7 @@ s.waitForBoot({
 );
 )
 
+
 /*a = Synth(\sawtooth);
 NodeWatcher.new(s)
 NodeWatcher.register(a, true)
@@ -427,8 +452,8 @@ a.isPlaying
 ~view_array.flat[0].cell_grid.grid[10][6].isDead
 
 ~view_array.flat[0].cell_grid.killAllOrganelles
-~view_array.flat[0].cell_grid.grid[0][0].organelle.synth.nodeID
-~view_array.flat[0].cell_grid.grid[0][0].organelle.synth
+~view_array.flat[0].cell_grid.grid[0][0].organelle.synth.isPlaying
+~view_array.flat[0].cell_grid.grid[0][0].organelle.synth.isRunning
 ~view_array.flat[0].cell_grid.grid[0][1].organelle.synth.get(\gate, {arg v; v.postln;})
 ~view_array.flat[0].cell_grid.grid[0][1].isDead
 
@@ -444,7 +469,7 @@ a.organelle.stop
 a = Synth(\sawtooth);
 a.release(-1)
 a.free
-
+Organelle.
 a.set(\gate, 1);
 a.set(\gate, 0)
 a.release*/
