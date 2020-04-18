@@ -5,17 +5,14 @@
 ~view_array.flat[0].cell_grid.grid[0][0].organelle.synth.isRunning
 ~view_array.flat[0].cell_grid.grid[0][1].organelle.synth.get(\gate, {arg v; v.postln;})
 ~view_array.flat[0].cell_grid.grid[0][1].isDead
+
+~sound_control_bar.background_(Color.black)
+~sound_control_bar.children[2].getBounds
+
 Organelle.total_synth_count_(0)
 a = Array.series(20, 0, 1)
 a.mean
 
-BufferOrganelle.total_synth_count
-b = Buffer.read(s, Platform.resourceDir +/+ "sounds/a11wlk01.wav", 0)
-b.numFrames
-b.play
-Synth(\buf, [\buffer, b.bufnum])
-s.scope
-Synth(\test)
 (
 s.waitForBoot({
 	////////////////////////////////////////////////////
@@ -25,7 +22,7 @@ s.waitForBoot({
 	////////////////////////////////////////////////////
 	Window.closeAll;
 	Organelle.total_synth_count_(0);
-	TempoClock.default = TempoClock.new(queueSize:4096);
+	TempoClock.default = TempoClock.new(queueSize:65536);
 	TempoClock.default.permanent = true;
 	(
 		(
@@ -49,13 +46,6 @@ s.waitForBoot({
 						end: BufSampleRate.kr(buffer) * dur * grainSize),
 					loop: 1);
 
-/*				player = PlayBuf.ar(
-					numChannels: 1,
-					bufnum: buffer,
-					rate: BufRateScale.kr(buffer) * rate,
-					startPos: startPos,
-					loop: 1
-				);*/
 				player = Pan2.ar(
 					in: player,
 					pos: pan
@@ -294,32 +284,9 @@ s.waitForBoot({
 			.value_(cells_y)
 			.action_({|v| cells_y = v.value.asInteger.clip(1, 100)  ; cells_y.postln;});
 
-
-			Button(
-				parent: w,
-				bounds:  Rect(10, 80, 300, 30))
-			.states_([["synth automaton!"]])
-			.action_({~liveAutomatons.add(
-				~makeAutomatonWindow.value(
-				xtext.textField.value.asInteger.clip(3, 30),
-				ytext.textField.value.asInteger.clip(3, 30),
-			/*				stext.textField.value.asInteger.clip(10, bounds.height)*/))
-			});
-
-			Button(
-				parent: w,
-				bounds:  Rect(10, 120, 300, 30))
-			.states_([["grain automaton!"]])
-			.action_({~liveBuffersAutomatons.add(
-				~makeBufferAutomatonWindow.value(
-				xtext.textField.value.asInteger.clip(3, 30),
-				ytext.textField.value.asInteger.clip(3, 30),
-			/*				stext.textField.value.asInteger.clip(10, bounds.height)*/))
-			});
-
 			EZText(
 				parent: w,
-				bounds: Rect(10, 160, 150, 30),
+				bounds: Rect(0, 80, 150, 30),
 				label: "master key")
 			.value_(48)
 			.action_({
@@ -330,6 +297,30 @@ s.waitForBoot({
 					sound_ctrl.update_button.doAction;
 				});
 			});
+
+			Button(
+				parent: w,
+				bounds:  Rect(10, 120, 300, 30))
+			.states_([["synth automaton!"]])
+			.action_({~liveAutomatons.add(
+				~makeAutomatonWindow.value(
+				xtext.textField.value.asInteger.clip(3, 30),
+				ytext.textField.value.asInteger.clip(3, 30),
+			/*				stext.textField.value.asInteger.clip(10, bounds.height)*/))
+			});
+
+			Button(
+				parent: w,
+				bounds:  Rect(10, 160, 300, 30))
+			.states_([["grain automaton!"]])
+			.action_({~liveBuffersAutomatons.add(
+				~makeBufferAutomatonWindow.value(
+				xtext.textField.value.asInteger.clip(3, 30),
+				ytext.textField.value.asInteger.clip(3, 30),
+			/*				stext.textField.value.asInteger.clip(10, bounds.height)*/))
+			});
+
+
 			Organelle.note_cubby_(nil);
 		}
 	);
@@ -420,7 +411,8 @@ s.waitForBoot({
 						view.cell_grid.setBufferOrganelles(
 							buffer:buf,
 							rates: [0.25, 4],
-							pans: [-1, 1]
+							pans: [-1, 1],
+							grainSizes: [1, 10],
 					);}
 				);
 				view;

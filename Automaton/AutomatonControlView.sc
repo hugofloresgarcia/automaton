@@ -212,7 +212,7 @@ AutomatonSoundView : VLayoutView{
 	}
 
 	init{|client|
-		this.client = client
+		this.client = client;
 	}
 
 	createWidgetActions{
@@ -319,10 +319,21 @@ AutomatonBufferView : VLayoutView {
 	<>entry_labels,
 	<>entry_values,
 	<>range_labels,
-	<>range_values;
+	<>range_values,
+
+	<>load_buffer,
+	<>buffer,
+	<>ranges,
+	<>entries;
+
+	*new{|parent, bounds, client|
+		^super.new(parent, bounds).init(client).createWidgetActions;
+	}
 
 	init{|client|
-		this.client = client
+		this.client = client;
+		// this.layout_(FlowLayout(this.bounds, 2@2, 2@2));
+
 	}
 
 	createWidgetActions{
@@ -333,12 +344,14 @@ AutomatonBufferView : VLayoutView {
 
 
 		////////////////////////////////////////
-		this.ranges = Dictionary.newFrom(List[
-			"rate", this.client.cell_grid.rate,
+		this.ranges = Dictionary.with(*[
+			\rate-> [0.5, 2],
 			// "dur", this.client.cell_grid.dur,
-			"pan", this.client.cell_grid.pan
+			\pan-> [-1, 1],
+			\grainSize -> [1, 10]
 		]);
 
+		this.ranges.postln;
 		this.entries = Dictionary.newFrom(List[]);
 
 		////////////////////////////////////////
@@ -352,12 +365,13 @@ AutomatonBufferView : VLayoutView {
 			parent: this,
 			bounds: grid_x @ grid_y)
 		.states_([["load buffer"]])
-		.action_(
+		.action_({
 			this.buffer = Buffer.loadDialog(Server.default)
-		);
+		});
 
 		this.entries.keysDo({
 			arg key;
+			key.postln;
 			this.eztexts.add(key -> EZText.new(
 				parent: this,
 				bounds: grid_x @ grid_y,
@@ -371,10 +385,11 @@ AutomatonBufferView : VLayoutView {
 
 		this.ranges.keysDo({
 			arg key;
+			key.postln;
 			this.textfields.add(key ->
 				RangeTextField(
 					parent: this,
-					bounds: grid_x @ grid_y,
+					bounds: Rect.fromPoints(0@0, grid_x @ grid_y),
 					labeltext: key,
 					min: this.ranges[key][0],
 					max: this.ranges[key][1]
@@ -388,16 +403,19 @@ AutomatonBufferView : VLayoutView {
 		.states_([["update all"]])
 		.action_({
 			arg b;
-			var buffer, rate, pan, dur;
+			var buffer, rate, pan, dur, grainSize;
 
 			client.cell_grid.killAllOrganelles();
 
 			buffer = this.buffer;
-			rate = this.textfields["rate"].getBounds.asArray;
-			pan = this.textfields["pan"].getBounds.asArray;
+			rate = this.textfields[\rate].getBounds.asArray;
+			pan = this.textfields[\pan].getBounds.asArray;
+			grainSize = this.textfields[\grainSize].getBounds.asArray;
+
+			// grainSize.postln;
 			// dur = this.textfields["dur"].getBounds.asArray;
 
-			client.cell_grid.setBufferOrganelles(buffer, rate, pan);
+			client.cell_grid.setBufferOrganelles(buffer, rate, pan, grainSize);
 		});
 
 	}

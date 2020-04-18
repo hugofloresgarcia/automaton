@@ -1,5 +1,6 @@
 Cell {
 	var <>grid_pos, <>size, <>color,
+	<>live_color,
 	<>abs_pos,
 	<>rect,
 	<>willDie,
@@ -20,6 +21,7 @@ Cell {
 	init{
 		this.abs_pos = this.grid_pos * this.size;
 		this.rect = Rect(this.abs_pos[0], this.abs_pos[1], this.size, this.size);
+		this.live_color = this.color;
 		this.willDie = true;
 		this.colorBounds = [0.6, 0.8];
 	}
@@ -46,7 +48,7 @@ Cell {
 	}
 
 	live {
-		this.color = Color.rand(this.colorBounds[0], this.colorBounds[1]);
+		this.color = this.live_color.vary(0.05);
 		this.willDie = false;
 
 	}
@@ -64,24 +66,28 @@ Cell {
 		Pen.color = Color.new255(51, 51, 51);
 		Pen.addRect(this.rect);
 
-		if(this.organelle.isKindOf(BufferOrganelle),{
+
+/*		if(this.organelle.isKindOf(BufferOrganelle),{
 		if(this.organelle.isNil.not,{
 			Pen.stringInRect(this.organelle.dict[\startPos], this.rect, Font("Helvetica", 9), Color.black);
 		});
-		});
+		});*/
 
 		//debug: write ON if the synth is making a sound
-		if(this.organelle.synth.isPlaying, {
-			Pen.stringInRect("ON", this.rect, Font("Helvetica", 9), Color.black);
-		});
+/*		if(this.organelle.isNil.not, {
+			if(this.organelle.synth.isPlaying, {
+				Pen.stringInRect("ON", this.rect, Font("Helvetica", 9), Color.black);
+			});
+		});*/
 
-
-		//debug: write REL if the synth is releasing
-		if(this.organelle.currently_releasing, {
-			Pen.stringInRect("REL", this.rect, Font("Helvetica", 9), Color.black);
-			Pen.fillColor = this.color.blend(Color.grey);
-			Pen.fillRect(this.rect);
-		});
+/*		//debug: write REL if the synth is releasing
+		if(this.organelle.isNil.not, {
+			if(this.organelle.currently_releasing, {
+				Pen.stringInRect("REL", this.rect, Font("Helvetica", 9), Color.black);
+				Pen.fillColor = this.color.blend(Color.grey);
+				Pen.fillRect(this.rect);
+			});
+		});*/
 
 		Pen.stroke;
 	}
@@ -220,12 +226,12 @@ Organelle {
 
 //A BUFFER CLASS I WILL USE LATER
 
-BufferOrganelle : Organelle {
+BufferOrganelle : Organelle{
 	classvar <>note_cubby,
 	<>default_max_note_frequency = 2,
 	<>max_note_frequency = 2,
 	<>total_synth_count = 0,
-	<>absolute_max_synth_count = 1000;
+	<>absolute_max_synth_count = 500;
 	var
 	<>synthdef,
 	<>synth,
@@ -239,15 +245,12 @@ BufferOrganelle : Organelle {
 	}
 
 	binit{|synthdef, arg_dict|
-		arg_dict.postln;
+		// arg_dict.postln;
 		this.synthdef = synthdef;
 		this.arg_dict = arg_dict;
 		this.currently_releasing = false;
-		this.arg_dict.postln;
 		this.dict = Dictionary.newFrom((this.arg_dict));
-		this.dict.postln;
 		this.rel = this.dict.at(\dur);
-		this.rel.postln;
 	}
 
 	play {

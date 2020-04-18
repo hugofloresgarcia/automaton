@@ -15,7 +15,12 @@ CellGrid {
 	<>rels,
 	<>cutoffs,
 	<>master_volume_bus,
-	<>master_synth;
+	<>master_synth,
+
+	<>buffer,
+	<>rates,
+	<>pans,
+	<>grainSizes;
 
 	*new{|cells_x = 10, cells_y = 10, cell_size = 10|
 		^super.newCopyArgs(cells_x, cells_y, cell_size).create;
@@ -30,7 +35,11 @@ CellGrid {
 			cell = Cell(
 				[row, column],
 				this.cell_size,
-				this.default_color).init;
+				Color(
+					red: (row / this.cells_y).linlin(0, 1, 0.5, 1),
+					green: (row * column / this.cells_y / this.cells_x).linlin(0, 1, 0.5, 1),
+					blue: (column / this.cells_x).linlin(0, 1, 0.5, 1))
+				).init;
 			cell.die;
 		});
 		this.randomness = 0;
@@ -64,7 +73,14 @@ CellGrid {
 		this.master_volume_bus = master_vol;
 	}
 
-	setBufferOrganelles{|buffer, rates, pans|
+	setBufferOrganelles{|buffer, rates, pans, grainSizes|
+		if (buffer.isNil.not, {
+			buffer = buffer.numChannels_(1);
+			this.buffer = buffer;});
+
+		this.rates = rates;
+		this.pans = pans;
+		this.grainSizes = grainSizes;
 		if(BufferOrganelle.note_cubby.isNil,{
 			BufferOrganelle.note_cubby = 0!(128);
 		});
@@ -72,11 +88,15 @@ CellGrid {
 			arg rows, column;
 			rows.collect({
 				arg cell, row;
-				var rate, pan, dur, startPos, args;
+				var rate, pan, dur, startPos, args, grainSize;
+
+				// this.grainSizes.postln;
+				// grainSizes.postln;
 
 				rate = row.linexp(0, this.cells_y, rates[0], rates[1]);
 				pan = column.linlin(0, this.cells_x, pans[0], pans[1]);
 				dur = (this.cells_x/10 * buffer.numFrames * buffer.numChannels / buffer.sampleRate).reciprocal;
+				grainSize = row.linlin(0, this.cells_x, grainSizes[0], grainSizes[1]);
 				startPos = column * dur;
 
 				// startPos.postln;
@@ -86,9 +106,9 @@ CellGrid {
 					\pan, pan,
 					\dur, dur,
 					\startPos, startPos,
+					\grainSize, grainSize,
 					\gate, 1,
 					\amp, this.master_volume_bus.asMap];
-				args.postln;
 				cell.organelle = BufferOrganelle(
 					synthdef: \buf,
 					arg_dict: args);
@@ -128,7 +148,6 @@ CellGrid {
 			scale = scale ++ new_scale;
 		});
 		scale = scale.flat - scale.mean.ceil + key;
-		scale.postln;
 
 		if(Organelle.note_cubby.isNil,{
 			Organelle.note_cubby = 0!(128);
@@ -233,10 +252,6 @@ CellGrid {
 		num.do({
 			arg count;
 			this.getNeighbors(a, b).choose.pop.live;
-			this.getNeighbors(a, b+1).choose.pop.live;
-			this.getNeighbors(a+1, b).choose.pop.live;
-			this.getNeighbors(a+1, b+1).choose.pop.live;
-			this.getNeighbors(a+2, b).choose.pop.live;
 		});
 	}
 	/////////////////////////////////////////////
