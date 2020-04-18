@@ -115,7 +115,7 @@ AutomatonControlView : View {
 		this.text_actions = [{
 			arg v;
 			var periodt;
-			periodt = (v.value/60).clip(1, 12);
+			periodt = (v.value/60).clip(1, 120);
 			this.client.frameRate_(periodt);
 		}];
 
@@ -198,10 +198,6 @@ AutomatonControlView : View {
 AutomatonSoundView : VLayoutView{
 	 var parent, bounds, <>client,
 	<>textfields,
-	<>params,
-	<>param_s,
-	<>single_entries,
-	<>single_entrie_s,
 	<>eztexts,
 	<>update_button,
 
@@ -238,23 +234,6 @@ AutomatonSoundView : VLayoutView{
 		grid_x = this.bounds.width - 10;
 		grid_y = this.bounds.height / (this.entry_labels.size + this.range_labels.size+1);
 
-		// this.single_entries.do({
-		// 	arg str, count;
-		// 	this.eztexts.add(EZText.new(
-		// 		parent: this,
-		// 		bounds: Rect(
-		// 			left: 0,
-		// 			top: grid_y * count,
-		// 			width:grid_x,
-		// 		height: grid_y),
-		// 		label: str,
-		// 		labelWidth: grid_x/4,
-		// 		textWidth: grid_x/4*3,
-		// 		labelHeight: grid_y)
-		// 		.value_(this.single_entrie_s[count]);
-		// 	);
-		// });
-
 
 		this.entry_labels.do({
 			arg str, count;
@@ -288,14 +267,6 @@ AutomatonSoundView : VLayoutView{
 			);
 		});
 
-/*		this.range_labels.do({
-			arg str, count;
-			this.ranges.add(
-				EZRanger(
-					parent: this,
-					bounds: grid_x@grid_y,
-					label: str)*/
-
 		this.update_button = Button(this, Rect(
 			left: 10,
 			top:  grid_y * ( this.entry_labels.size + this.range_labels.size),
@@ -306,6 +277,7 @@ AutomatonSoundView : VLayoutView{
 			arg b;
 			var synthdef, key, scale, pans, atks, rels, cutoffs;
 
+			client.cell_grid.killAllOrganelles();
 
 			synthdef = b.parent.eztexts[0].textField.value.replace("'", "").asSymbol;
 			key      = b.parent.eztexts[1].textField.value.asInt;
@@ -321,7 +293,6 @@ AutomatonSoundView : VLayoutView{
 			rels     = b.parent.textfields[2].getBounds.asArray;
 			cutoffs  = b.parent.textfields[3].getBounds.asArray;
 
-			client.cell_grid.killAllOrganelles();
 			client.cell_grid.setCellOrganelles(
 				synthdef: synthdef,
 				key: key,
@@ -330,10 +301,108 @@ AutomatonSoundView : VLayoutView{
 				atks: atks,
 				rels: rels,
 				cutoffs: cutoffs);
-			client.cell_grid.killAllOrganelles();
+			// client.cell_grid.killAllOrganelles();
 		});
 
 	}
+}
+
+AutomatonBufferView : VLayoutView {
+	var parent, bounds,
+	<>client,
+	<>textfields,
+
+	<>eztexts,
+	<>update_button,
+	<>buffer,
+
+	<>entry_labels,
+	<>entry_values,
+	<>range_labels,
+	<>range_values;
+
+	init{|client|
+		this.client = client
+	}
+
+	createWidgetActions{
+		// this.list_views.add(RangeTextField(
+		var grid_x, grid_y, update_button, top_labels;
+		this.textfields = Dictionary.new();
+		this.eztexts = Dictionary.new();
+
+
+		////////////////////////////////////////
+		this.ranges = Dictionary.newFrom(List[
+			"rate", this.client.cell_grid.rate,
+			// "dur", this.client.cell_grid.dur,
+			"pan", this.client.cell_grid.pan
+		]);
+
+		this.entries = Dictionary.newFrom(List[]);
+
+		////////////////////////////////////////
+
+		grid_x = this.bounds.width - 10;
+		grid_y = this.bounds.height / (this.entries.keys.size + this.ranges.keys.size+2);
+
+		////////////////////////////////////////
+
+		this.load_buffer = Button(
+			parent: this,
+			bounds: grid_x @ grid_y)
+		.states_([["load buffer"]])
+		.action_(
+			this.buffer = Buffer.loadDialog(Server.default)
+		);
+
+		this.entries.keysDo({
+			arg key;
+			this.eztexts.add(key -> EZText.new(
+				parent: this,
+				bounds: grid_x @ grid_y,
+				label: key,
+				labelWidth: grid_x/4,
+				textWidth: grid_x/4 * 3,
+				labelHeight: grid_y,
+				initVal: this.entries[key]
+			));
+		});
+
+		this.ranges.keysDo({
+			arg key;
+			this.textfields.add(key ->
+				RangeTextField(
+					parent: this,
+					bounds: grid_x @ grid_y,
+					labeltext: key,
+					min: this.ranges[key][0],
+					max: this.ranges[key][1]
+				)
+			);
+		});
+
+		////////////////////////////////////////
+
+		this.update_button = Button(this, grid_x@grid_y)
+		.states_([["update all"]])
+		.action_({
+			arg b;
+			var buffer, rate, pan, dur;
+
+			client.cell_grid.killAllOrganelles();
+
+			buffer = this.buffer;
+			rate = this.textfields["rate"].getBounds.asArray;
+			pan = this.textfields["pan"].getBounds.asArray;
+			// dur = this.textfields["dur"].getBounds.asArray;
+
+			client.cell_grid.setBufferOrganelles(buffer, rate, pan);
+		});
+
+	}
+
+
 }
 
 RangeTextField : View {

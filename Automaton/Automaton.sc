@@ -24,7 +24,6 @@ CellGrid {
 	create{
 		this.default_color = Color(51, 51, 51);
 
-
 		this.grid = Array.fill2D(this.cells_x, this.cells_y, {
 			arg row, column;
 			var cell, organelle;
@@ -65,6 +64,40 @@ CellGrid {
 		this.master_volume_bus = master_vol;
 	}
 
+	setBufferOrganelles{|buffer, rates, pans|
+		if(BufferOrganelle.note_cubby.isNil,{
+			BufferOrganelle.note_cubby = 0!(128);
+		});
+		this.grid.collect({
+			arg rows, column;
+			rows.collect({
+				arg cell, row;
+				var rate, pan, dur, startPos, args;
+
+				rate = row.linexp(0, this.cells_y, rates[0], rates[1]);
+				pan = column.linlin(0, this.cells_x, pans[0], pans[1]);
+				dur = (this.cells_x/10 * buffer.numFrames * buffer.numChannels / buffer.sampleRate).reciprocal;
+				startPos = column * dur;
+
+				// startPos.postln;
+				args = [
+					\buffer, buffer.bufnum,
+					\rate, rate,
+					\pan, pan,
+					\dur, dur,
+					\startPos, startPos,
+					\gate, 1,
+					\amp, this.master_volume_bus.asMap];
+				args.postln;
+				cell.organelle = BufferOrganelle(
+					synthdef: \buf,
+					arg_dict: args);
+				cell.organelle.midinote = column;
+			});
+		});
+
+	}
+
 	setCellOrganelles{|synthdef, key, scale , pans , atks, rels, cutoffs|
 		var num_octaves = (this.cells_x / scale.size).ceil;
 		var base_scale;
@@ -77,29 +110,29 @@ CellGrid {
 		this.rels     = rels;
 		this.cutoffs  = cutoffs;
 
-		//type checking
-		// synthdef.isKindOf(Symbol).postln;
-		// key.isKindOf(SimpleNumber).postln;
-		// scale.isKindOf(Array).postln;
-		// pans.isKindOf(Array).postln;
-		// rels.isKindOf(Array).postln;
-		// cutoffs.isKindOf(Array).postln;
+		"synthdef: ".post; this.synthdef.postln;
+		"key: ".post; this.key.postln;
+		"scale: ".post; this.scale.postln;
+		"pans: ".post; this.pans.postln;
+		"atks: ".post; this.atks.postln;
+		"rels: ".post; this.rels.postln;
+		"cutoffs: ".post; this.cutoffs.postln;
+
 
 		base_scale = this.scale;
 		scale = [];
 		num_octaves.do({
 			arg count;
 			var new_scale;
-			new_scale = base_scale + (12*count) + key;
-			scale = scale ++new_scale;
+			new_scale = base_scale + (12*count);
+			scale = scale ++ new_scale;
 		});
-		scale = scale.flat.scramble;
+		scale = scale.flat - scale.mean.ceil + key;
+		scale.postln;
 
 		if(Organelle.note_cubby.isNil,{
 			Organelle.note_cubby = 0!(128);
 		});
-
-		// Organelle.note_cubby.postln;
 
 		// scale.postln;
 		this.grid.collect({
@@ -117,22 +150,24 @@ CellGrid {
 					gate: 1
 				);
 				cell.organelle.amp_bus = this.master_volume_bus;
-				// cell.organelle.amp_bus.postln;
 			});
 		});
 	}
 
 	killAllOrganelles{
-		this.grid.flat.do({
-			arg cell;
-			cell.organelle.stop;
-		});
+			this.grid.flat.do({
+				arg cell;
+				cell.organelle.kill;
+				"killed".postln;
+			});
 	}
 	stopAllOrganelles{
-		this.grid.flat.do({
-			arg cell;
-			cell.organelle.stop;
-		});
+		Routine({
+			this.grid.flat.do({
+				arg cell;
+				cell.organelle.stop;
+			});
+		}).play;
 	}
 
 	setMasterVol{|val|
@@ -196,9 +231,13 @@ CellGrid {
 		cell = col.at(b);
 		cell.live;
 		num.do({
+			arg count;
 			this.getNeighbors(a, b).choose.pop.live;
+			this.getNeighbors(a, b+1).choose.pop.live;
+			this.getNeighbors(a+1, b).choose.pop.live;
+			this.getNeighbors(a+1, b+1).choose.pop.live;
+			this.getNeighbors(a+2, b).choose.pop.live;
 		});
-
 	}
 	/////////////////////////////////////////////
 	//////////////     DANIEL     /////////////
@@ -213,8 +252,6 @@ CellGrid {
 		var cell; //declare your new variables AT THE TOP
 		this.cells_x; //this is the max x coordinate
 		this.cells_y; //this is the max y coordinate
-
-
 	}
 
 	getState {
@@ -253,6 +290,7 @@ CellGrid {
 		^neighbors;
 	}
 
+
 	updateAll {
 		this.grid.do({
 			arg column, row;
@@ -283,10 +321,10 @@ CellGrid {
 
 	drawGameOfLife{|spawnRandomly = true|
 		^{
-			this.grid.do({
+			this.grid.scramble.do({
 				arg column, row;
 				// "row change ; ".post;
-				column.do({
+				column.scramble.do({
 					arg cell, c_idx;
 					var neighbors, num_alive, this_cell, rule;
 					// "column change ; ".postln;

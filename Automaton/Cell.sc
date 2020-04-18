@@ -21,7 +21,7 @@ Cell {
 		this.abs_pos = this.grid_pos * this.size;
 		this.rect = Rect(this.abs_pos[0], this.abs_pos[1], this.size, this.size);
 		this.willDie = true;
-		this.colorBounds = [0.6, 0.8]
+		this.colorBounds = [0.6, 0.8];
 	}
 
 
@@ -64,10 +64,17 @@ Cell {
 		Pen.color = Color.new255(51, 51, 51);
 		Pen.addRect(this.rect);
 
+		if(this.organelle.isKindOf(BufferOrganelle),{
+		if(this.organelle.isNil.not,{
+			Pen.stringInRect(this.organelle.dict[\startPos], this.rect, Font("Helvetica", 9), Color.black);
+		});
+		});
+
 		//debug: write ON if the synth is making a sound
 		if(this.organelle.synth.isPlaying, {
 			Pen.stringInRect("ON", this.rect, Font("Helvetica", 9), Color.black);
 		});
+
 
 		//debug: write REL if the synth is releasing
 		if(this.organelle.currently_releasing, {
@@ -130,7 +137,7 @@ Organelle {
 		max_note_frequency = max_note_frequency.clip(1, 3);
 
 		// if there are less than three
-		if(/*(note_cubby.at(this.midinote) < max_note_frequency) &&*/
+		if((note_cubby.at(this.midinote) < max_note_frequency) &&
 			(total_synth_count < absolute_max_synth_count), {
 
 
@@ -153,9 +160,10 @@ Organelle {
 		});
 	}
 
+
 	stop {
 		if (this.synth.isNil.not,{      // only release if synth exists
-			this.currently_releasing.postln;
+			// this.currently_releasing.postln;
 			if(this.currently_releasing.not, {
 				// if(this.synth.isPlaying,{   // only release if synth is playing
 				this.synth.set(\gate, 0); // set gate to 0 to release properly
@@ -165,11 +173,10 @@ Organelle {
 				this.currently_releasing = true;
 				this.rel.wait; //we're doing this inside a routine, so waiting is allowed
 
-
 				this.synth.release(-1); //releases the synth NOW
 				this.synth = nil; // I NEED TO GET RID OF THIS
 
-				"synth released".postln;
+				// "synth released".postln;
 				this.currently_releasing = false;
 
 				note_cubby[this.midinote] = note_cubby[this.midinote] - 1; //one fewer node
@@ -181,69 +188,146 @@ Organelle {
 
 	}
 
+	kill {
+		// THIS CAN BE CALLED FROM THE MAIN THREAD
+		// SO IT MEANS I CAN STOP SHIT ABRUPTLY
+		// USE IF UR DELETING THE REFERENCES TO THE SYNTHS IN THE NEAR FUTURE
+		if (this.synth.isNil.not,{      // only release if synth exists
+			// this.currently_releasing.postln;
+			if(this.currently_releasing.not, {
+				// if(this.synth.isPlaying,{   // only release if synth is playing
+				this.synth.set(\gate, 0); // set gate to 0 to release properly
+				// "node ".post; this.synth.nodeID.post; " released".postln;
+
+				NodeWatcher.unregister(this.synth); //unregister node from nodeWatcher
+				this.currently_releasing = true;
+
+				this.synth.release(-1); //releases the synth NOW
+				this.synth = nil; // I NEED TO GET RID OF THIS
+
+				// "synth released".postln;
+				this.currently_releasing = false;
+
+				note_cubby[this.midinote] = note_cubby[this.midinote] - 1; //one fewer node
+				total_synth_count = total_synth_count - 1; // one fewer node
+				"total synths: ".post; total_synth_count.postln;
+
+			});
+		});
+	}
+
 }
 
 //A BUFFER CLASS I WILL USE LATER
 
-/*BufferOrganelle {
+BufferOrganelle : Organelle {
 	classvar <>note_cubby,
 	<>default_max_note_frequency = 2,
 	<>max_note_frequency = 2,
 	<>total_synth_count = 0,
-	<>absolute_max_synth_count = 100;
+	<>absolute_max_synth_count = 1000;
 	var
 	<>synthdef,
 	<>synth,
-	<>arg_dict;
+	<>arg_dict,
+	<>rel,
+	<>dict;
 
 	*new{ |synthdef, arg_dict|
-		^super.newCopyArgs(synthdef, arg_dict);
+		arg_dict.postln;
+		^super.new.binit(synthdef, arg_dict);
+	}
+
+	binit{|synthdef, arg_dict|
+		arg_dict.postln;
+		this.synthdef = synthdef;
+		this.arg_dict = arg_dict;
+		this.currently_releasing = false;
+		this.arg_dict.postln;
+		this.dict = Dictionary.newFrom((this.arg_dict));
+		this.dict.postln;
+		this.rel = this.dict.at(\dur);
+		this.rel.postln;
 	}
 
 	play {
+		//dynamically change the maximun number of synths allowed in each midinote cubby between 1 and 3
+		//1 would alllow for more pitches
+		//3 would allow for different
+		//more pitches gets priority
 		if(total_synth_count > absolute_max_synth_count, {
 			max_note_frequency = max_note_frequency - 1;
 		}, {
 			max_note_frequency = max_note_frequency + 1;
 		});
-		max_note_frequency = max_note_frequency.clip(1, 3);
+		max_note_frequency = max_note_frequency.clip(1, 2);
 
-		if(note_cubby.at(this.midinote) < max_note_frequency, {
-
-			if (this.synth.isNil, {
-				this.synth = Synth(
-					defName: this.synthdef.asSymbol,
-					args: this.arg_dict);
-				NodeWatcher.register(this.synth, true);
-
-				note_cubby[this.midinote] = note_cubby[this.midinote] + 1;
-				total_synth_count = total_synth_count + 1;
-			},{
-				if(this.synth.isPlaying, {
-				},{
-					this.synth = Synth(
-						defName: this.synthdef.asSymbol,
-						args: this.arg_dict);
-					NodeWatcher.register(this.synth, true);
-
-					note_cubby[this.midinote] = note_cubby[this.midinote] + 1;
-					total_synth_count = total_synth_count + 1;
+		// if there are less than three
+		if(
+			(total_synth_count < absolute_max_synth_count), {
+				if (this.synth.isNil, { // if synth is nil, create a new instance
+					this.synth = Synth(this.synthdef.asSymbol, this.arg_dict);
+					NodeWatcher.register(this.synth, true); // register to check if .isPlaying
+					// "node ".post; this.synth.nodeID.post; " created".postln;
+					this.currently_releasing = false;
+					note_cubby[this.midinote] = note_cubby[this.midinote] + 1; // counting to set a max limit
+					total_synth_count = total_synth_count + 1; // counting to set  a max limit
 				});
-			});
 		});
 	}
 
 	stop {
-		if (this.synth.isNil.not,{
-			if(this.synth.isPlaying,{
-				this.synth.set(\gate, 0);
-				NodeWatcher.unregister(this.synth);
-				this.synth.free;
-				note_cubby[this.midinote] = note_cubby[this.midinote] - 1;
-				total_synth_count = total_synth_count - 1;
-			}, {
+		if (this.synth.isNil.not,{      // only release if synth exists
+			// this.currently_releasing.postln;
+			if(this.currently_releasing.not, {
+				// if(this.synth.isPlaying,{   // only release if synth is playing
+				this.synth.set(\gate, 0); // set gate to 0 to release properly
+				// "node ".post; this.synth.nodeID.post; " released".postln;
+
+				NodeWatcher.unregister(this.synth); //unregister node from nodeWatcher
+				this.currently_releasing = true;
+				this.rel.wait; //we're doing this inside a routine, so waiting is allowed
+
+				this.synth.release(-1); //releases the synth NOW
+				this.synth = nil; // I NEED TO GET RID OF THIS
+
+				// "synth released".postln;
+				this.currently_releasing = false;
+
+				note_cubby[this.midinote] = note_cubby[this.midinote] - 1; //one fewer node
+				total_synth_count = total_synth_count - 1; // one fewer node
+				"total synths: ".post; total_synth_count.postln;
+
 			});
 		});
 
 	}
-}*/
+
+	kill {
+		// THIS CAN BE CALLED FROM THE MAIN THREAD
+		// SO IT MEANS I CAN STOP SHIT ABRUPTLY
+		// USE IF UR DELETING THE REFERENCES TO THE SYNTHS IN THE NEAR FUTURE
+		if (this.synth.isNil.not,{      // only release if synth exists
+			// this.currently_releasing.postln;
+			if(this.currently_releasing.not, {
+				// if(this.synth.isPlaying,{   // only release if synth is playing
+				this.synth.set(\gate, 0); // set gate to 0 to release properly
+				// "node ".post; this.synth.nodeID.post; " released".postln;
+
+				NodeWatcher.unregister(this.synth); //unregister node from nodeWatcher
+				this.currently_releasing = true;
+
+				this.synth.release(-1); //releases the synth NOW
+				this.synth = nil; // I NEED TO GET RID OF THIS
+
+				// "synth released".postln;
+				this.currently_releasing = false;
+
+				note_cubby[this.midinote] = note_cubby[this.midinote] - 1; //one fewer node
+				total_synth_count = total_synth_count - 1; // one fewer node
+				"total synths: ".post; total_synth_count.postln;
+
+			});
+		});
+	}
+}
