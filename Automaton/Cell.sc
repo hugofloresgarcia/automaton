@@ -1,11 +1,13 @@
 Cell {
 	var <>grid_pos, <>size, <>color,
 	<>live_color,
+	<>dead_color,
 	<>abs_pos,
 	<>rect,
 	<>willDie,
 	<>colorBounds,
-	<>organelle;
+	<>organelle,
+	<>is_centroid;
 
 	*new { |grid_pos, size, color|
 		^super.newCopyArgs(grid_pos, size, color);
@@ -22,8 +24,14 @@ Cell {
 		this.abs_pos = this.grid_pos * this.size;
 		this.rect = Rect(this.abs_pos[0], this.abs_pos[1], this.size, this.size);
 		this.live_color = this.color;
+		this.dead_color = Color.new255(51, 51, 51);
 		this.willDie = true;
 		this.colorBounds = [0.6, 0.8];
+		this.is_centroid = false;
+	}
+
+	point{
+		^(this.grid_pos[0]@this.grid_pos[1]);
 	}
 
 
@@ -42,13 +50,13 @@ Cell {
 	}
 
 	die {
-		this.color = Color.new255(51, 51, 51);
+		this.color = this.dead_color;
 		this.willDie = true;
 
 	}
 
 	live {
-		this.color = this.live_color.vary(0.05);
+		this.color = this.live_color.vary(0.02);
 		this.willDie = false;
 
 	}
@@ -234,23 +242,24 @@ BufferOrganelle : Organelle{
 	<>absolute_max_synth_count = 500;
 	var
 	<>synthdef,
+	<>centroid,
 	<>synth,
 	<>arg_dict,
 	<>rel,
 	<>dict;
 
-	*new{ |synthdef, arg_dict|
+	*new{ |synthdef,centroid, arg_dict|
 		arg_dict.postln;
-		^super.new.binit(synthdef, arg_dict);
+		^super.new.binit(synthdef,centroid, arg_dict);
 	}
 
-	binit{|synthdef, arg_dict|
+	binit{|synthdef, centroid, arg_dict|
 		// arg_dict.postln;
 		this.synthdef = synthdef;
+		this.centroid = centroid;
 		this.arg_dict = arg_dict;
 		this.currently_releasing = false;
-		this.dict = Dictionary.newFrom((this.arg_dict));
-		this.rel = this.dict.at(\dur);
+		this.rel = `0.1;
 	}
 
 	play {
@@ -269,7 +278,12 @@ BufferOrganelle : Organelle{
 		if(
 			(total_synth_count < absolute_max_synth_count), {
 				if (this.synth.isNil, { // if synth is nil, create a new instance
-					this.synth = Synth(this.synthdef.asSymbol, this.arg_dict);
+
+					this.arg_dict.add(\buffer -> this.centroid.bufferptr.dereference);
+					this.arg_dict.add(\dur -> this.centroid.durptr.dereference);
+
+
+					this.synth = Synth(this.synthdef.asSymbol, this.arg_dict.asPairs(Array));
 					NodeWatcher.register(this.synth, true); // register to check if .isPlaying
 					// "node ".post; this.synth.nodeID.post; " created".postln;
 					this.currently_releasing = false;
@@ -289,7 +303,7 @@ BufferOrganelle : Organelle{
 
 				NodeWatcher.unregister(this.synth); //unregister node from nodeWatcher
 				this.currently_releasing = true;
-				this.rel.wait; //we're doing this inside a routine, so waiting is allowed
+				this.rel.dereference.wait; //we're doing this inside a routine, so waiting is allowed
 
 				this.synth.release(-1); //releases the synth NOW
 				this.synth = nil; // I NEED TO GET RID OF THIS

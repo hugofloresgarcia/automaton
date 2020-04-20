@@ -322,6 +322,8 @@ AutomatonBufferView : VLayoutView {
 	<>range_values,
 
 	<>load_buffer,
+	<>synthdef,
+	<>playback_menu,
 	<>buffer,
 	<>ranges,
 	<>entries;
@@ -332,6 +334,7 @@ AutomatonBufferView : VLayoutView {
 
 	init{|client|
 		this.client = client;
+		this.synthdef = \linbuf;
 		// this.layout_(FlowLayout(this.bounds, 2@2, 2@2));
 
 	}
@@ -345,14 +348,16 @@ AutomatonBufferView : VLayoutView {
 
 		////////////////////////////////////////
 		this.ranges = Dictionary.with(*[
-			\rate-> [0.5, 2],
+			\rate-> [0.125, 8],
 			// "dur", this.client.cell_grid.dur,
 			\pan-> [-1, 1],
-			\grainSize -> [1, 10]
+			\grainSize -> [0.01, 100]
 		]);
 
 		this.ranges.postln;
-		this.entries = Dictionary.newFrom(List[]);
+		this.entries = Dictionary.with(*[
+			\synthdef -> \linbuf
+		]);
 
 		////////////////////////////////////////
 
@@ -360,14 +365,41 @@ AutomatonBufferView : VLayoutView {
 		grid_y = this.bounds.height / (this.entries.keys.size + this.ranges.keys.size+2);
 
 		////////////////////////////////////////
+		this.load_buffer = HLayoutView(this, grid_x@grid_y);
+		this.client.cell_grid.centroids.do({
+			arg centroid, count;
+			Button(this.load_buffer)
+			.states_([["b" ++ count.asString]])
+			.action_({
+				buffer = Buffer.loadDialog(Server.default, action: {
+					arg b;
+					this.client.cell_grid.setBufferAt(count, b);
+				});
+			});
+		});
 
-		this.load_buffer = Button(
+/*		this.load_buffer = Button(
 			parent: this,
 			bounds: grid_x @ grid_y)
 		.states_([["load buffer"]])
 		.action_({
-			this.buffer = Buffer.loadDialog(Server.default)
-		});
+			buffer = Buffer.loadDialog(Server.default, action: {
+				arg b;
+				this.client.cell_grid.setBuffer(b);
+			});
+		});*/
+
+/*		this.playback_menu = Button(
+			parent: this,
+			bounds: grid_x @ grid_y)
+		.states_([["playback"]])
+		.action_({
+			Menu(
+				MenuAction("linear", {this.synthdef = \linbuf}),
+				MenuAction("sine", {this.synthdef = \sinbuf}),
+				MenuAction("pulse", {this.synthdef = \pulsebuf}),
+			);
+		});*/
 
 		this.entries.keysDo({
 			arg key;
@@ -389,11 +421,23 @@ AutomatonBufferView : VLayoutView {
 			this.textfields.add(key ->
 				RangeTextField(
 					parent: this,
-					bounds: Rect.fromPoints(0@0, grid_x @ grid_y),
+					bounds: Rect(
+						left:  0,
+						top: 0,
+						width: grid_x,
+						height: grid_y
+					),
 					labeltext: key,
 					min: this.ranges[key][0],
 					max: this.ranges[key][1]
 				)
+/*				AutomatonRanger(
+					parent: this,
+					bounds: Rect.fromPoints(0@0, grid_x @ grid_y),
+					label: key,
+					initAction: true,
+					controlSpec: ControlSpec(this.ranges[key][0], this.ranges[key][1]),
+					layout: \horz);*/
 			);
 		});
 
@@ -412,16 +456,26 @@ AutomatonBufferView : VLayoutView {
 			pan = this.textfields[\pan].getBounds.asArray;
 			grainSize = this.textfields[\grainSize].getBounds.asArray;
 
+			this.synthdef = this.eztexts[\synthdef].textField.value.replace("'", "").asSymbol;
+
 			// grainSize.postln;
 			// dur = this.textfields["dur"].getBounds.asArray;
 
-			client.cell_grid.setBufferOrganelles(buffer, rate, pan, grainSize);
+			client.cell_grid.setBufferOrganelles(this.synthdef, rate, pan, grainSize);
 		});
 
 	}
 
 
 }
+
+AutomatonRanger : EZRanger {
+
+	getBounds {
+		^[this.lo.asFloat, this.hi.asFloat];
+	}
+}
+
 
 RangeTextField : View {
 	var <>parent, <>bounds, <>labeltext, <>min, <>max,

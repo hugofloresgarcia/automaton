@@ -12,7 +12,8 @@
 Organelle.total_synth_count_(0)
 a = Array.series(20, 0, 1)
 a.mean
-
+~view_array.flat[0].cell_grid.centroids
+~view_array.flat[0].cell_grid.grid[0][0].organelle.synthdef.isKindOf(Symbol)
 (
 s.waitForBoot({
 	////////////////////////////////////////////////////
@@ -26,7 +27,7 @@ s.waitForBoot({
 	TempoClock.default.permanent = true;
 	(
 		(
-			SynthDef(\buf, {
+			SynthDef(\linbuf, {
 				arg rate = 1, buffer, startPos =0, gate = 1, amp = 0.3, dur= 1, pan=0, grainSize = 10;
 				var player, env;
 				env = EnvGen.ar(
@@ -43,7 +44,59 @@ s.waitForBoot({
 						trig: 0,
 						rate: BufRateScale.kr(buffer) * rate,
 						start: startPos,
-						end: BufSampleRate.kr(buffer) * dur * grainSize),
+						end: startPos + BufSampleRate.kr(buffer) * dur * grainSize),
+					loop: 1);
+
+				player = Pan2.ar(
+					in: player,
+					pos: pan
+				);
+				Out.ar(0, player * env * amp * 0.3);
+			}).add;
+		);
+		(
+			SynthDef(\sinbuf, {
+				arg rate = 1, buffer, startPos =0, gate = 1, amp = 0.3, dur= 1, pan=0, grainSize = 10;
+				var player, env, freq;
+				env = EnvGen.ar(
+					envelope: Env.adsr(
+						attackTime: 0.1,
+						releaseTime: dur),
+					gate: gate,
+					doneAction: 2);
+
+				freq = (BufSampleRate.kr(buffer) * dur / BufSampleRate.kr(buffer)) * BufRateScale.kr(buffer) * rate;
+
+				player = BufRd.ar(
+					numChannels: 1,
+					bufnum: buffer,
+					phase: SinOsc.ar(freq).range(startPos,startPos+ BufSampleRate.kr(buffer) * dur * grainSize),
+					loop: 1);
+
+				player = Pan2.ar(
+					in: player,
+					pos: pan
+				);
+				Out.ar(0, player * env * amp * 0.3);
+			}).add;
+		);
+		(
+			SynthDef(\pulsebuf, {
+				arg rate = 1, buffer, startPos =0, gate = 1, amp = 0.3, dur= 1, pan=0, grainSize = 10;
+				var player, env, freq;
+				env = EnvGen.ar(
+					envelope: Env.adsr(
+						attackTime: 0.1,
+						releaseTime: dur),
+					gate: gate,
+					doneAction: 2);
+
+				freq = (BufSampleRate.kr(buffer) * dur / BufSampleRate.kr(buffer)) * BufRateScale.kr(buffer) * rate;
+
+				player = BufRd.ar(
+					numChannels: 1,
+					bufnum: buffer,
+					phase: Pulse.ar(freq).range(startPos,startPos+ BufSampleRate.kr(buffer) * dur * grainSize),
 					loop: 1);
 
 				player = Pan2.ar(
@@ -249,8 +302,8 @@ s.waitForBoot({
 		~liveBufferAutomatons = List.new();
 		~mainMenu = {
 			var bounds = Window.availableBounds;
-			var cells_x = 24, cells_y = 18, cell_size = 20,
-			xtext, ytext, stext;
+			var cells_x = 24, cells_y = 18, cell_size = 20, n_clusters = 3,
+			xtext, ytext, stext, nctext;
 			w = Window.new(
 				name: "automata",
 				bounds: Rect(
@@ -286,7 +339,7 @@ s.waitForBoot({
 
 			EZText(
 				parent: w,
-				bounds: Rect(0, 80, 150, 30),
+				bounds: Rect(0, 80, 140, 30),
 				label: "master key")
 			.value_(48)
 			.action_({
@@ -296,6 +349,16 @@ s.waitForBoot({
 					sound_ctrl.eztexts.at(1).valueAction_(v.textField.value.asInt);
 					sound_ctrl.update_button.doAction;
 				});
+			});
+
+			nctext = EZText(
+				parent: w,
+				bounds: Rect(150, 80, 140, 30),
+				label: "clusters")
+			.value_(n_clusters)
+			.action_({
+				arg v;
+				v.value = v.value.asInteger.clip(1, 10);
 			});
 
 			Button(
@@ -317,6 +380,7 @@ s.waitForBoot({
 				~makeBufferAutomatonWindow.value(
 				xtext.textField.value.asInteger.clip(3, 30),
 				ytext.textField.value.asInteger.clip(3, 30),
+				nctext.textField.value.asInteger
 			/*				stext.textField.value.asInteger.clip(10, bounds.height)*/))
 			});
 
@@ -333,7 +397,8 @@ s.waitForBoot({
 		~makeBufferAutomatonWindow = {
 			arg
 			cells_x = 24,
-			cells_y = 12;
+			cells_y = 12,
+			n_clusters = 3;
 
 			var init_x, init_y, width, height, bounds,
 			cell_size,
@@ -403,17 +468,19 @@ s.waitForBoot({
 					v.cell_grid.stopAllOrganelles();
 				});
 				// .clickForControl;
+				view.cell_grid.setCentroids(n_clusters);
+				view.cell_grid.setBufferOrganelles(
+							synthdef: \linbuf,
+							rates: [0.25, 4],
+							pans: [-1, 1],
+					grainSizes: [1, 10]);
 
 				5.do({view.cell_grid.spawnRandom});
 				~temp_buffer = Buffer.read(s, Platform.resourceDir +/+ "sounds/a11wlk01.wav", 0,
 					action:{
 						arg buf;
-						view.cell_grid.setBufferOrganelles(
-							buffer:buf,
-							rates: [0.25, 4],
-							pans: [-1, 1],
-							grainSizes: [1, 10],
-					);}
+						view.cell_grid.setBuffers(buf);
+					}
 				);
 				view;
 			});
@@ -445,7 +512,7 @@ s.waitForBoot({
 				bounds: Rect(
 					left: ~control_bar.bounds.width / 2,
 					top: 0,
-					width: ~control_bar.bounds.width *9/ 16,
+					width: ~control_bar.bounds.width /2,
 					height: ~control_bar.bounds.height),
 				client: ~view_array.flatten.at(0)
 			).createAll;
@@ -455,7 +522,7 @@ s.waitForBoot({
 				bounds: Rect(
 					left: 0,
 					top: 0,
-					width: ~control_bar.bounds.width *7/ 16,
+					width: ~control_bar.bounds.width /2,
 					height: ~control_bar.bounds.height),
 				client: ~view_array.flatten.at(0)
 			);
@@ -618,39 +685,3 @@ s.waitForBoot({
 );
 )
 
-
-/*a = Synth(\sawtooth);
-NodeWatcher.new(s)
-NodeWatcher.register(a, true)
-a.set(\gate, 0);
-a.isRunning
-a.isPlaying
-
-3.post;
-~view_array.flat[0].cell_grid.master_volume_bus.getSynchronous
-~view_array.flat[0].cell_grid.grid[10][6].organelle.amp_bus
-~view_array.flat[0].cell_grid.grid[10][6].organelle.synth.set(\gate, 0)
-~view_array.flat[0].cell_grid.grid[10][6].isDead
-
-~view_array.flat[0].cell_grid.killAllOrganelles
-~view_array.flat[0].cell_grid.grid[0][0].organelle.synth.isPlaying
-~view_array.flat[0].cell_grid.grid[0][0].organelle.synth.isRunning
-~view_array.flat[0].cell_grid.grid[0][1].organelle.synth.get(\gate, {arg v; v.postln;})
-~view_array.flat[0].cell_grid.grid[0][1].isDead
-
-
-Organelle.note_cubby = 0!(128)
-Organelle.note_cubby
-a = Cell([0, 0], 10, Color.red)
-a.organelle = Organelle(\sawtooth, 60, 3000, 0.1, 1, 1, 0)
-
-a.organelle.play;
-a.organelle.stop
-
-a = Synth(\sawtooth);
-a.release(-1)
-a.free
-Organelle.
-a.set(\gate, 1);
-a.set(\gate, 0)
-a.release*/

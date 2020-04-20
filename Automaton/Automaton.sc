@@ -20,7 +20,9 @@ CellGrid {
 	<>buffer,
 	<>rates,
 	<>pans,
-	<>grainSizes;
+	<>grainSizes,
+
+	<>centroids;
 
 	*new{|cells_x = 10, cells_y = 10, cell_size = 10|
 		^super.newCopyArgs(cells_x, cells_y, cell_size).create;
@@ -73,11 +75,90 @@ CellGrid {
 		this.master_volume_bus = master_vol;
 	}
 
-	setBufferOrganelles{|buffer, rates, pans, grainSizes|
-		if (buffer.isNil.not, {
-			buffer = buffer.numChannels_(1);
-			this.buffer = buffer;});
+	setCentroids{|n_clusters|
+		//should receive an array of argument dictionaries
+		var dim = [this.cells_x, this.cells_y].sort[0];
+		var center_cell = this.grid[(this.cells_x/2).floor][(this.cells_y/2).floor];
+		var rightmost_cell = this.grid[dim-1][(dim/2).floor];
 
+		var angle = 2pi / n_clusters;
+		var r_edge = rightmost_cell.point - center_cell.point;
+		this.centroids = List();
+
+		n_clusters.do({
+			arg count;
+			var centroid;
+			centroid = (r_edge.rotate(angle * count));
+			centroid = centroid + center_cell.point;
+			this.centroids.add(Centroid(
+				centroid,
+				nil
+			)
+			.color_(Color.rand(0.5, 0.8))
+			.durptr_(0.01););
+			centroid.x.floor.post; " ".post ; centroid.y.floor.postln;
+			this.grid[centroid.x.floor][centroid.y.floor].is_centroid = true;
+		});
+	}
+
+	setBuffers{|buf_list|
+		if(buf_list.isKindOf(Collection).not, {
+			buf_list = [buf_list];
+		});
+
+		this.centroids.do({
+			arg centroid, count;
+			var buffer = buf_list.wrapAt(count);
+			centroid.bufferptr = Ref(buf_list.wrapAt(count));
+			centroid.durptr =  `(this.cells_x/10 * buffer.numFrames * buffer.numChannels
+				/ buffer.sampleRate).reciprocal;
+		});
+		this.cell_grid.do({
+			arg row, columns;
+			columns.do({
+				arg cell, column;
+				cell.dict[\dur] = column * cell.centroid.durptr.dereference;
+			})
+		});
+	}
+
+	setBufferAt{|index, buf|
+		this.centroids[index].bufferptr = Ref(buf);
+	}
+
+
+
+	/*// //debug
+	w = Window.new.front;
+	w.alwaysOnTop_(true);
+	a = AutomatonView(w, 0, 0, 12, 24, 10);
+	a.drawFunc_(a.cell_grid.draw);
+
+
+	a.cell_grid.setCentroids(3);
+
+	a.cell_grid.grid.flat.do({
+	arg cell;
+	if(cell.is_centroid, {cell.live});
+	})
+
+	(
+		var center_cell = a.cell_grid.grid[(a.cell_grid.cells_x/2).ceil][(a.cell_grid.cells_y/2).ceil];
+		center_cell.live
+	)
+*/
+	findClosestCentroid{|cell|
+		var results = List.new();
+		this.centroids.do({
+			arg centroid, count;
+			results.add(cell.point.dist(centroid.point));
+		});
+		^this.centroids[results.minIndex];
+	}
+
+
+	setBufferOrganelles{|synthdef, rates, pans, grainSizes|
+		this.synthdef = synthdef;
 		this.rates = rates;
 		this.pans = pans;
 		this.grainSizes = grainSizes;
@@ -88,35 +169,40 @@ CellGrid {
 			arg rows, column;
 			rows.collect({
 				arg cell, row;
-				var rate, pan, dur, startPos, args, grainSize;
+				var rate, pan, dur, startPos, args, grainSize, centroid;
 
 				// this.grainSizes.postln;
 				// grainSizes.postln;
 
+				centroid = this.findClosestCentroid(cell);
+				cell.live_color = centroid.color;
+				cell.dead_color = centroid.color.blend(Color.new255(51, 51,51), 0.8);
+
 				rate = row.linexp(0, this.cells_y, rates[0], rates[1]);
 				pan = column.linlin(0, this.cells_x, pans[0], pans[1]);
-				dur = (this.cells_x/10 * buffer.numFrames * buffer.numChannels / buffer.sampleRate).reciprocal;
 				grainSize = row.linlin(0, this.cells_x, grainSizes[0], grainSizes[1]);
-				startPos = column * dur;
+				startPos = column * 0.01;
 
 				// startPos.postln;
-				args = [
-					\buffer, buffer.bufnum,
+				args = Dictionary.newFrom(List[
 					\rate, rate,
 					\pan, pan,
-					\dur, dur,
 					\startPos, startPos,
 					\grainSize, grainSize,
 					\gate, 1,
-					\amp, this.master_volume_bus.asMap];
+					\amp, this.master_volume_bus.asMap]);
+
 				cell.organelle = BufferOrganelle(
-					synthdef: \buf,
+					synthdef: synthdef,
+					centroid: centroid,
 					arg_dict: args);
+
 				cell.organelle.midinote = column;
 			});
 		});
 
 	}
+
 
 	setCellOrganelles{|synthdef, key, scale , pans , atks, rels, cutoffs|
 		var num_octaves = (this.cells_x / scale.size).ceil;
@@ -396,3 +482,81 @@ CellGrid {
 		}
 	}
 }
+
+Centroid {
+	var
+	<>point,
+	<>bufferptr,
+	<>durptr,
+	<>color;
+
+	*new{|point, buffer|
+		^super.newCopyArgs(point, buffer);
+	}
+}
+
+
+
+Cluster {
+	var
+	<>centroid,
+	<>cells_x,
+	<>cells_y,
+	<>color;
+
+	*new{|centroid, cells_x, cells_y|
+		^super.new.init(centroid, cells_x, cells_y);
+	}
+
+	init{|centroid, cells_x, cells_y|
+		this.centroid = centroid;
+		this.cells_x = cells_x;
+		this.cells_y = cells_y;
+	}
+
+
+
+}
+
+
+Arg2D {
+	//map an arg on two dimensional space
+	var
+	<>bounds,
+	<>arg_symbol,
+	<>warp,
+	<>direction;
+
+
+	*new{|arg_symbol, bounds, warp|
+		^super.new.init(arg_symbol, bounds, warp)
+
+	}
+
+	init{|arg_symbol, bounds, warp|
+		this.arg_symbol = arg_symbol;
+		this.bounds = bounds;
+		this.warp = warp;
+	}
+
+	map{|x, y|
+		if(direction == \x,{
+			if(warp == \exp, {
+				^x.linexp(0, 1, bounds.left, bounds.width);
+			});
+			if(warp == \lin, {
+				^x.linlin(0, 1, bounds.left, bounds.width);
+			});
+		});
+		if(direction == \y,{
+			if(warp == \exp, {
+				^x.linexp(0, 1, bounds.left, bounds.width);
+			});
+			if(warp == \lin, {
+				^x.linlin(0, 1, bounds.left, bounds.width);
+			});
+		});
+		^nil;
+	}
+}
+
